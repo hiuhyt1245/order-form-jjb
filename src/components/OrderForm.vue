@@ -791,6 +791,8 @@ body {
 // ─── 彈框底部按鈕 ─────────────────────────────
 .dialog-footer {
   display: flex;
+  justify-content: center;
+  align-items: center;
   gap: 12px;
   width: 100%;
 }
