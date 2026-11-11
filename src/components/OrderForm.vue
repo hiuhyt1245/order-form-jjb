@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { TAIWAN_ADDRESS_DATA } from '@/data/taiwanAddress.js'
 import { useLiff } from '@/composables/useLiff.js'
 
@@ -20,6 +20,10 @@ onMounted(() => initLiff())
 const formRef = ref(null)
 const confirmDialogVisible = ref(false)
 const submitting = ref(false)
+
+// ── 訂單成功狀態 ───────────────────────────────
+const isSuccess = ref(false)
+const successOrderNo = ref('')
 
 // ── 表單資料 ──────────────────────────────────
 const form = ref({
@@ -119,11 +123,13 @@ async function handleFinalSubmit() {
       // 本地預覽模擬（未設定 API 網址）
       await new Promise((r) => setTimeout(r, 600))
       confirmDialogVisible.value = false
-      ElMessageBox.alert(
-        '【本地測試模式】表單驗證成功！\n注意：尚未設定 GAS_API_URL，故未實際呼叫後端。',
-        '測試提示',
-        { confirmButtonText: '確定' },
-      )
+      // ElMessageBox.alert(
+      //   '【本地測試模式】表單驗證成功！\n注意：尚未設定 GAS_API_URL，故未實際呼叫後端。',
+      //   '測試提示',
+      //   { confirmButtonText: '確定' },
+      // )
+      console.log('【本地測試模式】表單驗證成功！')
+      isSuccess.value = true
       return
     }
 
@@ -147,16 +153,12 @@ async function handleFinalSubmit() {
 
     if (result.status === 'success') {
       confirmDialogVisible.value = false
-      const successMsg = result.orderNo
-        ? `訂單編號：#${result.orderNo}\n訂單已成功送出！明細已發送至您的 LINE。`
-        : '訂單已成功送出！明細已發送至您的 LINE。'
-      await ElMessageBox.alert(successMsg, '送出成功 🎉', {
-        confirmButtonText: '確定',
-      })
-      // 若在 LINE 內建瀏覽器，自動關閉視窗
-      if (typeof liff !== 'undefined' && liff.isInClient()) {
-        liff.closeWindow()
-      }
+      successOrderNo.value = result.orderNo || ''
+      isSuccess.value = true
+      // 若在 LINE 內建瀏覽器，自動關閉視窗（已改為「再訂購一筆」切換畫面，暫時保留）
+      // if (typeof liff !== 'undefined' && liff.isInClient()) {
+      //   liff.closeWindow()
+      // }
     } else {
       throw new Error(result.message || '後端回傳未知錯誤')
     }
@@ -166,6 +168,36 @@ async function handleFinalSubmit() {
   } finally {
     submitting.value = false
   }
+}
+
+/** Step 3：再訂購一筆 → 重置表單並切回訂單畫面 */
+function resetAndReorder() {
+  // 重置表單欄位（保留 userId / displayName）
+  const { userId: uid, displayName: name } = form.value
+  form.value = {
+    userId: uid,
+    displayName: name,
+    items: '',
+    deliveryMethod: '自取',
+    pickupName: '',
+    pickupDate: '',
+    pickupPhone: '',
+    pickupNote: '',
+    ordererName: '',
+    receiverName: '',
+    receiverPhone: '',
+    addressCity: '',
+    addressDistrict: '',
+    addressDetail: '',
+    shippingDate: '',
+    temperature: '常溫',
+    deliveryNote: '',
+  }
+  // 清除驗證狀態
+  formRef.value?.resetFields()
+  // 重置成功狀態
+  successOrderNo.value = ''
+  isSuccess.value = false
 }
 </script>
 
@@ -187,7 +219,7 @@ async function handleFinalSubmit() {
     </div>
 
     <!-- 主要表單畫面 -->
-    <div v-else>
+    <div v-else-if="!isSuccess">
       <!-- 標題區 -->
       <header class="header-section">
         <h1>覓棗晨 訂購單</h1>
@@ -419,6 +451,15 @@ async function handleFinalSubmit() {
           </div>
         </template>
       </el-dialog>
+    </div>
+
+    <!-- 訂單成功畫面 -->
+    <div v-else class="success-section">
+      <div class="success-icon">🎉</div>
+      <h2 class="success-title">送出成功！</h2>
+      <p v-if="successOrderNo" class="success-order-no">訂單編號：#{{ successOrderNo }}</p>
+      <p class="success-msg">訂單已成功送出！<br>明細已發送至您的 LINE。</p>
+      <el-button class="reorder-btn" @click="resetAndReorder">再訂購一筆</el-button>
     </div>
   </div>
 </template>
@@ -826,6 +867,65 @@ body {
   &:hover {
     background-color: #f5b222 !important;
     border-color: #f5b222 !important;
+  }
+}
+
+// ─── 訂單成功畫面 ─────────────────────────────
+.success-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: 40px 24px;
+  text-align: center;
+
+  .success-icon {
+    font-size: 4rem;
+    margin-bottom: 16px;
+  }
+
+  .success-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #a2cca4;
+    margin-bottom: 16px;
+  }
+
+  .success-order-no {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #febc2c;
+    background: #fffbf0;
+    border: 1px solid #febc2c;
+    border-radius: 8px;
+    padding: 8px 20px;
+    margin-bottom: 16px;
+  }
+
+  .success-msg {
+    font-size: 0.95rem;
+    color: #555555;
+    line-height: 1.8;
+    margin-bottom: 32px;
+  }
+
+  .reorder-btn {
+    height: 56px;
+    padding: 0 40px;
+    font-size: 1rem !important;
+    font-weight: 600;
+    border-radius: 12px;
+    background-color: #febc2c !important;
+    border-color: #febc2c !important;
+    color: #333333 !important;
+    box-shadow: 0 4px 16px rgba(254, 188, 44, 0.3);
+    transition: all 0.3s;
+
+    &:hover {
+      background-color: #f5b222 !important;
+      opacity: 0.95;
+    }
   }
 }
 </style>
