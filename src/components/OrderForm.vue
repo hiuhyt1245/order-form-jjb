@@ -442,7 +442,7 @@ function resetAndReorder() {
 
         <template #footer>
           <div class="dialog-footer">
-            <el-button class="dialog-btn-cancel" @click="confirmDialogVisible = false">
+            <el-button v-show="!submitting" class="dialog-btn-cancel" @click="confirmDialogVisible = false">
               返回修改
             </el-button>
             <el-button class="dialog-btn-confirm" :loading="submitting" @click="handleFinalSubmit">
