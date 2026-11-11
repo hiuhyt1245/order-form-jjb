@@ -12,7 +12,7 @@ const LIFF_ID = import.meta.env.VITE_LIFF_ID || ''
 const GAS_API_URL = import.meta.env.VITE_GAS_API_URL || ''
 
 // ── LIFF 初始化 ──────────────────────────────
-const { loading, isFriend, userId, displayName, initLiff } = useLiff(LIFF_ID)
+const { loading, isFriend, userId, displayName, isAuthError, authErrorDesc, initLiff } = useLiff(LIFF_ID)
 
 onMounted(() => initLiff())
 
@@ -204,12 +204,17 @@ function resetAndReorder() {
 <template>
   <div class="form-wrapper">
     <!-- 全頁讀取狀態（LIFF 驗證中） -->
-    <div
-      v-if="loading"
-      v-loading="true"
-      element-loading-text="驗證 LINE 帳號中..."
-      class="loading-placeholder"
-    />
+    <div v-if="loading" v-loading="true" element-loading-text="驗證 LINE 帳號中..." class="loading-placeholder" />
+
+    <!-- 授權錯誤畫面 -->
+    <div v-else-if="isAuthError" class="auth-error-section">
+      <div class="auth-error-icon">🔒</div>
+      <h2 class="auth-error-title">授權未完成</h2>
+      <p class="auth-error-desc">{{ authErrorDesc }}。<br>必須完成授權方可填寫訂購單。</p>
+      <el-button class="retry-auth-btn" @click="liff.login({ redirectUri: window.location.href })">
+        重新嘗試授權
+      </el-button>
+    </div>
 
     <!-- 未加入好友提示 -->
     <div v-else-if="!isFriend" class="notice-card">
@@ -230,12 +235,7 @@ function resetAndReorder() {
       <el-form ref="formRef" :model="form" :rules="rules" label-position="top" size="large">
         <!-- 訂購品項 -->
         <el-form-item label="訂購品項與數量" prop="items" required>
-          <el-input
-            v-model="form.items"
-            type="textarea"
-            :rows="5"
-            placeholder="填寫範例：&#10;5A 5斤裝*1盒"
-          />
+          <el-input v-model="form.items" type="textarea" :rows="5" placeholder="填寫範例：&#10;5A 5斤裝*1盒" />
         </el-form-item>
 
         <!-- 取貨方式 -->
@@ -253,14 +253,8 @@ function resetAndReorder() {
           </el-form-item>
 
           <el-form-item label="自取日期" prop="pickupDate" required>
-            <el-date-picker
-              v-model="form.pickupDate"
-              type="date"
-              placeholder="請選擇日期"
-              format="YYYY-MM-DD"
-              value-format="YYYY-MM-DD"
-              style="width: 100%"
-            />
+            <el-date-picker v-model="form.pickupDate" type="date" placeholder="請選擇日期" format="YYYY-MM-DD"
+              value-format="YYYY-MM-DD" style="width: 100%" :editable="false" />
           </el-form-item>
 
           <el-form-item label="聯絡電話" prop="pickupPhone" required>
@@ -283,11 +277,7 @@ function resetAndReorder() {
           </el-form-item>
 
           <el-form-item label="收件人聯絡電話" prop="receiverPhone" required>
-            <el-input
-              v-model="form.receiverPhone"
-              type="tel"
-              placeholder="請填寫電話號碼"
-            />
+            <el-input v-model="form.receiverPhone" type="tel" placeholder="請填寫電話號碼" />
           </el-form-item>
 
           <!-- 收件人地址 -->
@@ -296,58 +286,30 @@ function resetAndReorder() {
               <div class="address-group">
                 <!-- 縣市 -->
                 <el-form-item prop="addressCity" style="margin-bottom: 0; width: 100%">
-                  <el-select
-                    v-model="form.addressCity"
-                    placeholder="請選擇縣市"
-                    style="width: 100%"
-                    @change="handleCityChange"
-                  >
-                    <el-option
-                      v-for="city in cityOptions"
-                      :key="city.name"
-                      :label="city.name"
-                      :value="city.name"
-                    />
+                  <el-select v-model="form.addressCity" placeholder="請選擇縣市" style="width: 100%"
+                    @change="handleCityChange">
+                    <el-option v-for="city in cityOptions" :key="city.name" :label="city.name" :value="city.name" />
                   </el-select>
                 </el-form-item>
 
                 <!-- 鄉鎮市區 -->
                 <el-form-item prop="addressDistrict" style="margin-bottom: 0; width: 100%">
-                  <el-select
-                    v-model="form.addressDistrict"
-                    placeholder="請選擇鄉鎮市區"
-                    :disabled="!form.addressCity"
-                    style="width: 100%"
-                  >
-                    <el-option
-                      v-for="dist in districtOptions"
-                      :key="dist"
-                      :label="dist"
-                      :value="dist"
-                    />
+                  <el-select v-model="form.addressDistrict" placeholder="請選擇鄉鎮市區" :disabled="!form.addressCity"
+                    style="width: 100%">
+                    <el-option v-for="dist in districtOptions" :key="dist" :label="dist" :value="dist" />
                   </el-select>
                 </el-form-item>
               </div>
 
               <!-- 詳細地址 -->
-              <el-input
-                v-model="form.addressDetail"
-                type="textarea"
-                :rows="2"
-                placeholder="請填寫街道、路段、巷弄與門牌號碼&#10;（例如：中正路100號）"
-              />
+              <el-input v-model="form.addressDetail" type="textarea" :rows="2"
+                placeholder="請填寫街道、路段、巷弄與門牌號碼&#10;（例如：中正路100號）" />
             </div>
           </el-form-item>
 
           <el-form-item label="期望出貨日期" prop="shippingDate">
-            <el-date-picker
-              v-model="form.shippingDate"
-              type="date"
-              placeholder="請選擇日期（可不填）"
-              format="YYYY-MM-DD"
-              value-format="YYYY-MM-DD"
-              style="width: 100%"
-            />
+            <el-date-picker v-model="form.shippingDate" type="date" placeholder="請選擇日期（可不填）" format="YYYY-MM-DD"
+              value-format="YYYY-MM-DD" style="width: 100%" :editable="false" />
           </el-form-item>
 
           <el-form-item label="運送溫層" prop="temperature">
@@ -369,14 +331,8 @@ function resetAndReorder() {
       </el-form>
 
       <!-- ── 訂單內容確認彈框 ── -->
-      <el-dialog
-        v-model="confirmDialogVisible"
-        title="請確認訂單內容"
-        class="confirm-dialog"
-        align-center
-        :close-on-click-modal="false"
-        append-to-body
-      >
+      <el-dialog v-model="confirmDialogVisible" title="請確認訂單內容" class="confirm-dialog" align-center
+        :close-on-click-modal="false" append-to-body>
         <div class="confirm-content">
           <div class="confirm-item">
             <div class="confirm-label">訂購品項與數量:</div>
@@ -477,7 +433,11 @@ function resetAndReorder() {
 }
 
 html {
-  font-size: 28px; // 根字體放大（行動優先）
+  font-size: 20px;
+  /* 恢復標準基準值 (1rem = 16px)，避免 UI 元件爆開 */
+  -webkit-text-size-adjust: 100%;
+  /* 防止 iOS Safari 自動放大字體 */
+  text-size-adjust: 100%;
 }
 
 body {
@@ -512,12 +472,13 @@ body {
 }
 
 // 必填星號移至標籤後方
-.el-form-item.is-required:not(.is-no-asterisk) > .el-form-item__label::after {
+.el-form-item.is-required:not(.is-no-asterisk)>.el-form-item__label::after {
   content: '*';
   color: #f56c6c;
   margin-left: 2px;
 }
-.el-form-item.is-required:not(.is-no-asterisk) > .el-form-item__label::before {
+
+.el-form-item.is-required:not(.is-no-asterisk)>.el-form-item__label::before {
   display: none !important;
 }
 
@@ -625,7 +586,7 @@ body {
   background: #febc2c !important;
 }
 
-.el-radio__input.is-checked + .el-radio__label {
+.el-radio__input.is-checked+.el-radio__label {
   color: #333333 !important;
   font-weight: 600;
 }
@@ -867,6 +828,55 @@ body {
   &:hover {
     background-color: #f5b222 !important;
     border-color: #f5b222 !important;
+  }
+}
+
+// ─── 授權錯誤畫面 ─────────────────────────────
+.auth-error-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 80vh;
+  padding: 40px 24px;
+  text-align: center;
+
+  .auth-error-icon {
+    font-size: 4rem;
+    margin-bottom: 16px;
+  }
+
+  .auth-error-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #f56c6c;
+    margin-bottom: 16px;
+  }
+
+  .auth-error-desc {
+    font-size: 0.95rem;
+    color: #555555;
+    line-height: 1.8;
+    margin-bottom: 32px;
+    white-space: pre-line;
+  }
+
+  .retry-auth-btn {
+    height: 56px;
+    padding: 0 40px;
+    font-size: 1rem !important;
+    font-weight: 600;
+    border-radius: 12px;
+    background-color: #febc2c !important;
+    border-color: #febc2c !important;
+    color: #333333 !important;
+    box-shadow: 0 4px 16px rgba(254, 188, 44, 0.3);
+    transition: all 0.3s;
+
+    &:hover {
+      background-color: #f5b222 !important;
+      opacity: 0.95;
+    }
   }
 }
 

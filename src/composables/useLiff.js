@@ -1,17 +1,19 @@
 import { ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 
 /**
  * useLiff — 封裝 LINE LIFF 初始化邏輯
  *
  * @param {string} liffId  - 從環境變數或設定傳入的 LIFF ID（空字串 → 本地預覽模式）
- * @returns {{ loading, isFriend, userId, displayName, initLiff }}
+ * @returns {{ loading, isFriend, userId, displayName, isAuthError, authErrorDesc, initLiff }}
  */
 export function useLiff(liffId) {
   const loading = ref(false)
   const isFriend = ref(true)
   const userId = ref('')
   const displayName = ref('')
+  const isAuthError = ref(false)
+  const authErrorDesc = ref('')
 
   async function initLiff() {
     // 若未設定 LIFF_ID，以本地預覽模式執行，不阻塞畫面
@@ -32,13 +34,8 @@ export function useLiff(liffId) {
       const urlParams = new URLSearchParams(window.location.search)
       if (urlParams.has('error') || urlParams.has('error_description')) {
         const errorDesc = urlParams.get('error_description') || '您已取消 LINE 帳號授權'
-        await ElMessageBox.alert(
-          `${errorDesc}。\n必須完成授權方可填寫訂購單。`,
-          '授權未完成',
-          { confirmButtonText: '關閉頁面', type: 'warning' },
-        )
-        // 在 LINE 內建瀏覽器關閉視窗，否則嘗試關閉分頁
-        liff.isInClient() ? liff.closeWindow() : window.close()
+        authErrorDesc.value = errorDesc
+        isAuthError.value = true
         return
       }
 
@@ -69,6 +66,6 @@ export function useLiff(liffId) {
     }
   }
 
-  return { loading, isFriend, userId, displayName, initLiff }
+  return { loading, isFriend, userId, displayName, isAuthError, authErrorDesc, initLiff }
 }
 
