@@ -5,12 +5,13 @@ import { ElMessage, ElMessageBox } from 'element-plus'
  * useLiff — 封裝 LINE LIFF 初始化邏輯
  *
  * @param {string} liffId  - 從環境變數或設定傳入的 LIFF ID（空字串 → 本地預覽模式）
- * @returns {{ loading, isFriend, userId }}
+ * @returns {{ loading, isFriend, userId, displayName, initLiff }}
  */
 export function useLiff(liffId) {
   const loading = ref(false)
   const isFriend = ref(true)
   const userId = ref('')
+  const displayName = ref('')
 
   async function initLiff() {
     // 若未設定 LIFF_ID，以本地預覽模式執行，不阻塞畫面
@@ -53,6 +54,7 @@ export function useLiff(liffId) {
       // 4. 取得使用者 Profile
       const profile = await liff.getProfile()
       userId.value = profile.userId
+      displayName.value = profile.displayName || ''
 
       // 5. 確認是否為官方帳號好友
       const friendship = await liff.getFriendship()
@@ -67,6 +69,6 @@ export function useLiff(liffId) {
     }
   }
 
-  return { loading, isFriend, userId, initLiff }
+  return { loading, isFriend, userId, displayName, initLiff }
 }
 

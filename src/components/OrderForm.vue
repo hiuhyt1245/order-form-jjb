@@ -12,7 +12,7 @@ const LIFF_ID = import.meta.env.VITE_LIFF_ID || ''
 const GAS_API_URL = import.meta.env.VITE_GAS_API_URL || ''
 
 // ── LIFF 初始化 ──────────────────────────────
-const { loading, isFriend, userId, initLiff } = useLiff(LIFF_ID)
+const { loading, isFriend, userId, displayName, initLiff } = useLiff(LIFF_ID)
 
 onMounted(() => initLiff())
 
@@ -23,8 +23,9 @@ const submitting = ref(false)
 
 // ── 表單資料 ──────────────────────────────────
 const form = ref({
-  // userId 由 LIFF 初始化後注入
+  // userId 與 displayName 由 LIFF 初始化後注入
   userId: '',
+  displayName: '',
   items: '',
   deliveryMethod: '自取',
   // 自取
@@ -44,8 +45,9 @@ const form = ref({
   deliveryNote: '',
 })
 
-// userId 改變時同步回 form（userId 由 useLiff 管理）
+// userId 與 displayName 改變時同步回 form（由 useLiff 管理）
 watch(userId, (val) => { form.value.userId = val })
+watch(displayName, (val) => { form.value.displayName = val })
 
 // ── 地址下拉選項 ──────────────────────────────
 const cityOptions = computed(() => TAIWAN_ADDRESS_DATA)
@@ -145,7 +147,10 @@ async function handleFinalSubmit() {
 
     if (result.status === 'success') {
       confirmDialogVisible.value = false
-      await ElMessageBox.alert('訂單已成功送出！明細已發送至您的 LINE。', '送出成功 🎉', {
+      const successMsg = result.orderNo
+        ? `訂單編號：#${result.orderNo}\n訂單已成功送出！明細已發送至您的 LINE。`
+        : '訂單已成功送出！明細已發送至您的 LINE。'
+      await ElMessageBox.alert(successMsg, '送出成功 🎉', {
         confirmButtonText: '確定',
       })
       // 若在 LINE 內建瀏覽器，自動關閉視窗
@@ -227,7 +232,7 @@ async function handleFinalSubmit() {
           </el-form-item>
 
           <el-form-item label="聯絡電話" prop="pickupPhone" required>
-            <el-input v-model="form.pickupPhone" placeholder="請填寫聯絡電話" inputmode="numeric" />
+            <el-input v-model="form.pickupPhone" placeholder="請填寫聯絡電話" type="tel" />
           </el-form-item>
 
           <el-form-item label="備註" prop="pickupNote">
@@ -249,7 +254,6 @@ async function handleFinalSubmit() {
             <el-input
               v-model="form.receiverPhone"
               type="tel"
-              inputmode="numeric"
               placeholder="請填寫電話號碼"
             />
           </el-form-item>
