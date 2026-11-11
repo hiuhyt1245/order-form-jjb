@@ -1,11 +1,13 @@
-<script setup></script>
+<script setup>
+import { computed } from 'vue'
+import zhTw from 'element-plus/dist/locale/zh-tw.mjs'
+import OrderForm from '@/components/OrderForm.vue'
+
+const locale = computed(() => zhTw)
+</script>
 
 <template>
-  <h1>You did it!</h1>
-  <p>
-    Visit <a href="https://vuejs.org/" target="_blank" rel="noopener">vuejs.org</a> to read the
-    documentation
-  </p>
+  <el-config-provider :locale="locale">
+    <OrderForm />
+  </el-config-provider>
 </template>
-
-<style scoped></style>
