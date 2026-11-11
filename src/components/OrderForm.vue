@@ -740,7 +740,7 @@ body {
   width: 80%;
   margin: 16px auto 0;
   height: 60px;
-  font-size: 1.2rem !important;
+  font-size: 1rem !important;
   font-weight: 600;
   border-radius: 12px;
   background-color: #febc2c !important;
